@@ -1,43 +1,51 @@
+import os
+import asyncio
 import logging
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import threading
 
-# === AAPKI DETAILS BHAR DI HAIN ===
-BOT_TOKEN = "8808135127:AAFrNotIqrR6_qIDJeGRj-3bb6ScvPR9TtE"
+TOKEN = "8808135127:AAFrNotIqrR6_qIDJeGRj-3bb6ScvPR9TtE"
 ADMIN_ID = 8534490009
 CHANNEL_LINK = "https://t.me/+eETcGp4GVUMwNzQ1"
 
-logging.basicConfig(level=logging.INFO)
-user_mapping = {}
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"OK")
+
+def run_health_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+    server.serve_forever()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id == ADMIN_ID:
-        await update.message.reply_text("Aap Admin hain. Users ke messages yahan aayenge.")
-        return
-    
-    welcome_text = f"❤️ Join Our Channel 👇\n{https://t.me/+eETcGp4GVUMwNzQ1}"
-    await update.message.reply_text(welcome_text, parse_mode="Markdown")
+    keyboard = [[InlineKeyboardButton("Join Channel", url=CHANNEL_LINK)]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("Welcome! Click below to join:", reply_markup=reply_markup)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    
-    # User message -> Admin ko milega
-    if user_id != ADMIN_ID:
-        copied_msg = await update.message.copy(chat_id=ADMIN_ID)
-        user_mapping[copied_msg.message_id] = user_id
-
-    # Admin reply -> User ko jayega
-    elif user_id == ADMIN_ID and update.message.reply_to_message:
-        replied_msg_id = update.message.reply_to_message.message_id
-        if replied_msg_id in user_mapping:
-            target_user_id = user_mapping[replied_msg_id]
+    user = update.effective_user
+    if user.id == ADMIN_ID:
+        if update.message.reply_to_message:
             try:
-                await update.message.copy(chat_id=target_user_id)
+                orig_text = update.message.reply_to_message.text or ""
+                target_id = int(orig_text.split("ID: ")[1].split(")")[0])
+                await context.bot.send_message(chat_id=target_id, text=update.message.text)
+                await update.message.reply_text("Message sent to user.")
             except Exception as e:
-                await update.message.reply_text(f"❌ Message nahi gaya: {e}")
+                await update.message.reply_text("Could not send reply. Make sure you replied to a forwarded message containing the user ID.")
+    else:
+        forward_text = f"From: {user.first_name} (ID: {user.id})\n\n{update.message.text}"
+        await context.bot.send_message(chat_id=ADMIN_ID, text=forward_text)
+        await update.message.reply_text("Your message has been sent to the admin.")
 
-if name == 'main':
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+if __name__ == '__main__':
+    threading.Thread(target=run_health_server, daemon=True).start()
+    app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, handle_message))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.run_polling()
+                                      
