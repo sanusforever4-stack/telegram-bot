@@ -6,7 +6,6 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
 
-# Token Render ke secure environment se automatic aayega
 TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = 8534490009
 CHANNEL_LINK = "https://t.me/+eETcGp4GVUMwNzQ1"
@@ -67,4 +66,4 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.run_polling()
-        
+    
