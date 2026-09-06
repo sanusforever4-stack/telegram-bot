@@ -7,7 +7,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
 
 TOKEN = os.environ.get("BOT_TOKEN")
-ADMIN_ID = 8534490009
+ADMIN_ID = 8320414034
 CHANNEL_LINK = "https://t.me/+eETcGp4GVUMwNzQ1"
 BACKUP_CHANNEL = "https://t.me/+t9iVAvqf0283NzY9"
 
